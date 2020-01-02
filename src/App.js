@@ -7,16 +7,11 @@ import 'firebase/auth';
 import StyledFirebaseAuth from 'react-firebaseui/StyledFirebaseAuth';
 
 
-const uiConfig = {
-  signInFlow: 'popup',
-  signInOptions: [
-    firebase.auth.GoogleAuthProvider.PROVIDER_ID
-  ],
-  callbacks: {
-    signInSuccessWithAuthResult: () => false
-  }
-};
+const terms = { F: 'Fall', W: 'Winter', S: 'Spring'};
+const days = ['M', 'Tu', 'W', 'Th', 'F'];
+const meetsPat = /^ *((?:M|Tu|W|Th|F)+) +(\d\d?):(\d\d) *[ -] *(\d\d?):(\d\d) *$/;
 
+// Firebase Info
 const firebaseConfig = {
   apiKey: "AIzaSyDYpZBrieajimUfn1lUpcTs-vIKo0ZX1ME",
   authDomain: "scheduler-66dc0.firebaseapp.com",
@@ -31,12 +26,16 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database().ref();
 
-const Banner = ({ user, title }) => (
-  <React.Fragment>
-    { user ? <Welcome user={ user } /> : <SignIn /> }
-    <Title>{ title || '[ loading... ]' }</Title>
-  </React.Fragment>
-);
+// Authorization and Header UI
+const uiConfig = {
+  signInFlow: 'popup',
+  signInOptions: [
+    firebase.auth.GoogleAuthProvider.PROVIDER_ID
+  ],
+  callbacks: {
+    signInSuccessWithAuthResult: () => false
+  }
+};
 
 const Welcome = ({ user }) => (
   <Message color="info">
@@ -56,28 +55,14 @@ const SignIn = () => (
   />
 );
 
-const terms = { F: 'Fall', W: 'Winter', S: 'Spring'};
-
-const buttonColor = selected => (
-  selected ? 'button is-success is-selected' : 'button'
+const Banner = ({ user, title }) => (
+  <React.Fragment>
+    { user ? <Welcome user={ user } /> : <SignIn /> }
+    <Title>{ title || '[ loading... ]' }</Title>
+  </React.Fragment>
 );
 
-// hasAddons connects the buttons
-const TermSelector = ({ state }) => (
-  <Button.Group hasAddons>
-    { Object.values(terms)
-        .map(value => 
-            <Button key={value} 
-              color={buttonColor(value === state.term)}
-              onClick={ () => state.setTerm(value)}
-              >
-              { value }
-            </Button>
-        )
-    }
-  </Button.Group>
-);
-
+// Course Management
 const getCourseTerm = course => (
   terms[course.id.charAt(0)]
 );
@@ -85,11 +70,6 @@ const getCourseTerm = course => (
 const getCourseNumber = course => (
   course.id.slice(1, 4)
 );
-
-// a conflict must involve overlapping days and times
-const days = ['M', 'Tu', 'W', 'Th', 'F'];
-
-const meetsPat = /^ *((?:M|Tu|W|Th|F)+) +(\d\d?):(\d\d) *[ -] *(\d\d?):(\d\d) *$/;
 
 const daysOverlap = (days1, days2) => ( 
   days.some(day => days1.includes(day) && days2.includes(day))
@@ -115,27 +95,23 @@ const hasConflict = (course, selected) => {
   selected.some(selection => courseConflict(course, selection))
 )};
 
-const moveCourse = course => {
-  const meets = prompt('Enter new meeting data, in this format:', course.meets);
-  if (!meets) return;
-  const {days} = timeParts(meets);
-  if (days) saveCourse(course, meets); 
-  else moveCourse(course);
-};
+const buttonColor = selected => (
+  selected ? 'button is-success is-selected' : 'button'
+);
 
-const saveCourse = (course, meets) => {
-  db.child('courses').child(course.id).update({meets})
-    .catch(error => alert(error));
-};
-
-const Course = ({ course, state, user }) => (
-  <Button color={ buttonColor(state.selected.includes(course)) }
-    onClick={ () => state.toggle(course) }
-    onDoubleClick={ user ? () => moveCourse(course) : null }
-    disabled={ hasConflict(course, state.selected) }
-    >
-    { getCourseTerm(course) } CS { getCourseNumber(course) }: { course.title }
-  </Button>
+const TermSelector = ({ state }) => (
+  <Button.Group hasAddons>
+    { Object.values(terms)
+        .map(value => 
+            <Button key={value} 
+              color={buttonColor(value === state.term)}
+              onClick={ () => state.setTerm(value)}
+              >
+              { value }
+            </Button>
+        )
+    }
+  </Button.Group>
 );
 
 const timeParts = meets => {
@@ -149,15 +125,28 @@ const timeParts = meets => {
   };
 };
 
-const addCourseTimes = course => ({
-  ...course,
-  ...timeParts(course.meets)
-});
+const saveCourse = (course, meets) => {
+  db.child('courses').child(course.id).update({meets})
+    .catch(error => alert(error));
+};
 
-const addScheduleTimes = schedule => ({
-  title: schedule.title,
-  courses: Object.values(schedule.courses).map(addCourseTimes)
-});
+const moveCourse = course => {
+  const meets = prompt('Enter new meeting data, in this format:', course.meets);
+  if (!meets) return;
+  const {days} = timeParts(meets);
+  if (days) saveCourse(course, meets); 
+  else moveCourse(course);
+};
+
+const Course = ({ course, state, user }) => (
+  <Button color={ buttonColor(state.selected.includes(course)) }
+    onClick={ () => state.toggle(course) }
+    onDoubleClick={ user ? () => moveCourse(course) : null }
+    disabled={ hasConflict(course, state.selected) }
+    >
+    { getCourseTerm(course) } CS { getCourseNumber(course) }: { course.title }
+  </Button>
+);
 
 const useSelection = () => {
   const [selected, setSelected] = useState([]);
@@ -186,6 +175,16 @@ const CourseList = ({ courses, user }) => {
     </React.Fragment>
   )
 };
+
+const addCourseTimes = course => ({
+  ...course,
+  ...timeParts(course.meets)
+});
+
+const addScheduleTimes = schedule => ({
+  title: schedule.title,
+  courses: Object.values(schedule.courses).map(addCourseTimes)
+});
 
 // Components (Banner, CourseList) must be capitalized. They call the corresponding function
 // useEffect gets called when the state of any of the elements in the arg2 list are updated
