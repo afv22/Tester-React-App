@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import 'rbx/index.css';
 import { Button, Container, Title } from 'rbx';
 
@@ -30,7 +30,7 @@ const schedule = {
 };
 
 const Banner = ({ title }) => (
-  <Title>{ title }</Title>
+  <Title>{ title || '[ loading... ]' }</Title>
 );
 
 const terms = { F: 'Fall', W: 'Winter', S: 'Spring'};
@@ -57,11 +57,28 @@ const CourseList = ({ courses }) => (
 );
 
 // Components (Banner, CourseList) must be capitalized. They call the corresponding function
-const App = () =>  (
-  <Container>
-    <Banner title={ schedule.title } />
-    <CourseList courses={ schedule.courses } />
-  </Container>
-);
+const App = () => {
+  const [schedule, setSchedule] = useState({ title: '', courses: [] });
+  const url = 'https://courses.cs.northwestern.edu/394/data/cs-courses.php';
+
+  useEffect(() => {
+    
+    const fetchSchedule = async () => {
+      const response = await fetch(url);
+      if (!response.ok) throw response;
+      const json = await response.json();
+      setSchedule(json);
+    }
+    
+    fetchSchedule();
+  }, []);
+
+  return (
+    <div className="container">
+      <Banner title={ schedule.title } />
+      <CourseList courses={ schedule.courses } />
+    </div>
+  );
+};
 
 export default App;
