@@ -1,4 +1,7 @@
 import React from 'react';
+import 'rbx/index.css';
+import { Button, Container, Title } from 'rbx';
+
 
 const schedule = {
   "title": "CS Courses for 2018-2019",
@@ -27,7 +30,7 @@ const schedule = {
 };
 
 const Banner = ({ title }) => (
-  <h1>{ title }</h1>
+  <Title>{ title }</Title>
 );
 
 const terms = { F: 'Fall', W: 'Winter', S: 'Spring'};
@@ -41,24 +44,24 @@ const getCourseNumber = course => (
 )
   
 const Course = ({ course }) => (
-  <button>
+  <Button>
     { getCourseTerm(course) } CS { getCourseNumber(course) }: { course.title }
-  </button>
+  </Button>
 );
 
 // Always include a key when building components in loops. The key should be unique and constant (normally an id)
 const CourseList = ({ courses }) => (
-  <div>
+  <Button.Group>
     { courses.map(course => <Course key={course.id} course={ course } />) }
-  </div>
+  </Button.Group>
 );
 
 // Components (Banner, CourseList) must be capitalized. They call the corresponding function
 const App = () =>  (
-  <div>
+  <Container>
     <Banner title={ schedule.title } />
     <CourseList courses={ schedule.courses } />
-  </div>
+  </Container>
 );
 
 export default App;
